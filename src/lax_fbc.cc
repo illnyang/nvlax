@@ -57,6 +57,7 @@ main (int argc,
 
                 if (temp == offset) {
                     offset = s_text.virtual_address() + data - v_text_content.data();
+                    break;
                 }
             }
 

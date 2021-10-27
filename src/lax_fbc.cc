@@ -9,6 +9,8 @@
     OR IMPLIED WARRANTY. IN NO EVENT WILL THE AUTHORS BE HELD
     LIABLE FOR ANY DAMAGES ARISING FROM THE USE OF THIS SOFTWARE.  */
 
+#include <iostream>
+
 #include <LIEF/ELF.hpp>
 #include <Zydis/Zydis.h>
 
@@ -37,6 +39,8 @@ main (int argc,
         offset = s_rodata.virtual_address() + s_rodata.search("This hardware does not support NvFBC");
     }
 
+    bool success = false;
+
     {
         ZydisDecoder decoder;
         ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
@@ -57,6 +61,7 @@ main (int argc,
 
                 if (temp == offset) {
                     offset = s_text.virtual_address() + data - v_text_content.data();
+                    success = true;
                     break;
                 }
             }
@@ -64,6 +69,11 @@ main (int argc,
             data += instr.length;
             length -= instr.length;
         }
+    }
+
+    if (!success) {
+        std::cerr << "x-ref not found, can't proceed with patching\n";
+        return EXIT_FAILURE;
     }
 
     // this makes both branches identical

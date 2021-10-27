@@ -9,6 +9,8 @@
     OR IMPLIED WARRANTY. IN NO EVENT WILL THE AUTHORS BE HELD
     LIABLE FOR ANY DAMAGES ARISING FROM THE USE OF THIS SOFTWARE.  */
 
+#include <iostream>
+
 #include <LIEF/ELF.hpp>
 #include <Zydis/Zydis.h>
 
@@ -33,6 +35,7 @@ main (int argc,
     ZydisDecoder decoder;
     ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
 
+    bool success = false;
     uint64_t offset;
 
     {
@@ -54,6 +57,7 @@ main (int argc,
 
             // this should work forever if we assume that NV_ENCODE_API_FUNCTION_LIST will never change!
             if (instr.mnemonic == ZYDIS_MNEMONIC_MOV && instr.operands[0].mem.disp.value == 0xF0) {
+                success = true;
                 break;
             }
 
@@ -61,6 +65,13 @@ main (int argc,
             length -= instr.length;
         }
     }
+
+    if (!success) {
+        std::cerr << "x-ref not found, can't proceed with patching\n";
+        return EXIT_FAILURE;
+    }
+
+    success = false;
 
     {
         // 0x235 here is an approximation (we should never have to go past that address)
@@ -79,12 +90,18 @@ main (int argc,
                 (++n) > 1)
             {
                 offset += (data - v_func_bytes.data());
+                success = true;
                 break;
             }
 
             data += instr.length;
             length -= instr.length;
         }
+    }
+
+    if (!success) {
+        std::cerr << "x-ref not found, can't proceed with patching\n";
+        return EXIT_FAILURE;
     }
 
     // NOP the jump that happens after the test

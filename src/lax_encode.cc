@@ -63,10 +63,10 @@ main (int argc,
 
     {
         // 0x235 here is an approximation (we should never have to go past that address)
-        auto func_bytes = bin->get_content_from_virtual_address(offset, 0x235);
+        auto v_func_bytes = bin->get_content_from_virtual_address(offset, 0x235);
 
-        uint8_t *data = func_bytes.data();
-        size_t length = func_bytes.size();
+        uint8_t *data = v_func_bytes.data();
+        size_t length = v_func_bytes.size();
 
         // look for the second instance of 'test eax, eax'
         uint8_t n = 0;
@@ -77,7 +77,7 @@ main (int argc,
                 instr.operands[1].reg.value == ZYDIS_REGISTER_EAX &&
                 (++n) > 1)
             {
-                offset += (data - func_bytes.data());
+                offset += (data - v_func_bytes.data());
                 break;
             }
 

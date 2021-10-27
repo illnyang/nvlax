@@ -46,10 +46,11 @@ main (int argc,
 
         ZydisDecodedInstruction instr;
         while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder, data, length, &instr))) {
-            if (instr.mnemonic == ZYDIS_MNEMONIC_LEA)
+            if (instr.mnemonic == ZYDIS_MNEMONIC_LEA) {
                 offset = f_nvenc_ci.value() +
                          (data - v_func_bytes.data() + instr.length) +
                          instr.operands[1].mem.disp.value;
+            }
 
             // this should work forever if we assume that NV_ENCODE_API_FUNCTION_LIST will never change!
             if (instr.mnemonic == ZYDIS_MNEMONIC_MOV && instr.operands[0].mem.disp.value == 0xF0) {

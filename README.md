@@ -12,7 +12,7 @@
 
 # Requirements
 - Working internet connection during configuration (i.e cloning does NOT include dependencies)
-- CMake
+- CMake (on Ubuntu 20.04 LTS you will need to update your version of cmake first. Guide: https://graspingtech.com/upgrade-cmake/)
 - C++ compiler
 
 # Building

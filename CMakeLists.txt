@@ -77,5 +77,4 @@ target_include_directories(nvlax_fbc PRIVATE ${LIEF_INCLUDE_DIRS})
 target_link_libraries(nvlax_encode PRIVATE Zydis ${LIEF_LIBRARIES})
 target_link_libraries(nvlax_fbc PRIVATE Zydis ${LIEF_LIBRARIES})
 
-
 install(TARGETS nvlax_encode nvlax_fbc)

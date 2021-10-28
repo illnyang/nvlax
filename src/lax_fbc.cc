@@ -40,6 +40,8 @@ main (int argc,
         offset = s_rodata.virtual_address() + s_rodata.search("This hardware does not support NvFBC");
     }
 
+    std::cout << "[+] libnvidia-fbc.so\n";
+
     bool found = false;
 
     {
@@ -77,6 +79,8 @@ main (int argc,
     // this makes both branches identical
     bin->patch_address(offset, { 0x48, 0x83, 0xC4, 0x08, 0xC3 });
     bin->write(output.data());
+
+    std::cout << "[+] patched successfully\n";
 
     return EXIT_SUCCESS;
 }

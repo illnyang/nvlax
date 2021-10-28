@@ -13,6 +13,7 @@
 
 #include <LIEF/ELF.hpp>
 #include <Zydis/Zydis.h>
+#include <ppk_assert.h>
 
 #include "common.h"
 
@@ -39,7 +40,7 @@ main (int argc,
         offset = s_rodata.virtual_address() + s_rodata.search("This hardware does not support NvFBC");
     }
 
-    bool success = false;
+    bool found = false;
 
     {
         ZydisDecoder decoder;
@@ -60,8 +61,8 @@ main (int argc,
                               instr.operands[1].mem.disp.value;
 
                 if (temp == offset) {
+                    found = true;
                     offset = s_text.virtual_address() + data - v_text_content.data();
-                    success = true;
                     break;
                 }
             }
@@ -71,10 +72,7 @@ main (int argc,
         }
     }
 
-    if (!success) {
-        std::cerr << "x-ref not found, can't proceed with patching\n";
-        return EXIT_FAILURE;
-    }
+    PPK_ASSERT_ERROR(found);
 
     // this makes both branches identical
     bin->patch_address(offset, { 0x48, 0x83, 0xC4, 0x08, 0xC3 });

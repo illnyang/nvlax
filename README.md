@@ -25,16 +25,23 @@ cmake ..
 make
 ```
 
+Protip: use WSL if you're using Windows.
+
 # Example of usage
 
 ## Patch NvENC in-place:
 
 ```bash
+Linux:
 # nvlax_encode -i /usr/lib/libnvidia-encode.so.495.44 -o /usr/lib/libnvidia-encode.so.495.44
+Windows:
+# nvlax_encode -i nvEncodeAPI64.dll -o nvEncodeAPI64.dll
+# nvlax_encode -i nvEncodeAPI.dll -o nvEncodeAPI.dll
 ```
 ## Patch NvFBC in-place:
 
 ```bash
+Linux:
 # nvlax_fbc -i /usr/lib/libnvidia-fbc.so.495.44 -o /usr/lib/libnvidia-fbc.so.495.44
 ```
 
@@ -44,7 +51,7 @@ make
 This patcher performs assembly-level heuristics instead of naive pattern-matching. The patching itself works more/less the same way as in [keylase/nvidia-patch](https://github.com/keylase/nvidia-patch).
 
 #### Which driver versions are supported?
-I have tested this patcher against the following versions:
+I have tested this patcher against the following versions (on Linux):
 
    - 470.74
    - 495.29.05
@@ -53,7 +60,7 @@ I have tested this patcher against the following versions:
 It *should* work on previous versions as well. Please don't open-up new issues if you're using ancient drivers, thanks.
 
 #### Windows support?
-No.
+`nvlax_encode` accepts NVIDIA DLLs as input files. NvFBC patching is not supported yet, though.
 
 # Credits
 [keylase/nvidia-patch](https://github.com/keylase/nvidia-patch) - this project wouldn't exist if it wasn't for their outstanding reverse-engineering efforts. thanks!

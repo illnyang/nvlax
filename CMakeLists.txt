@@ -57,6 +57,28 @@ endif()
 message(STATUS "LIEF include directory: ${LIEF_INCLUDE_DIRS}")
 message(STATUS "LIEF library: ${LIEF_LIBRARIES}")
 
+CPMAddPackage(
+        NAME PPK_ASSERT
+        GIT_TAG master
+        GITHUB_REPOSITORY gpakosz/PPK_ASSERT
+        DOWNLOAD_ONLY YES
+)
+
+if (PPK_ASSERT_ADDED)
+    add_library(PPK_ASSERT STATIC
+            ${PPK_ASSERT_SOURCE_DIR}/src/ppk_assert.cpp
+            ${PPK_ASSERT_SOURCE_DIR}/src/ppk_assert.h
+    )
+
+    target_compile_definitions(PPK_ASSERT PUBLIC
+            -DPPK_ASSERT_ENABLED=1
+    )
+
+    target_include_directories(PPK_ASSERT PUBLIC
+            $<BUILD_INTERFACE:${PPK_ASSERT_SOURCE_DIR}/src/>
+    )
+endif()
+
 add_executable(nvlax_encode
         src/common.cc
         src/lax_encode.cc
@@ -74,7 +96,7 @@ target_compile_features(nvlax_encode PRIVATE cxx_std_17)
 target_compile_features(nvlax_fbc PRIVATE cxx_std_17)
 target_include_directories(nvlax_encode PRIVATE ${LIEF_INCLUDE_DIRS})
 target_include_directories(nvlax_fbc PRIVATE ${LIEF_INCLUDE_DIRS})
-target_link_libraries(nvlax_encode PRIVATE Zydis ${LIEF_LIBRARIES})
-target_link_libraries(nvlax_fbc PRIVATE Zydis ${LIEF_LIBRARIES})
+target_link_libraries(nvlax_encode PRIVATE Zydis ${LIEF_LIBRARIES} PPK_ASSERT)
+target_link_libraries(nvlax_fbc PRIVATE Zydis ${LIEF_LIBRARIES} PPK_ASSERT)
 
 install(TARGETS nvlax_encode nvlax_fbc)

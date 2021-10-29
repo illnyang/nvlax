@@ -42,12 +42,12 @@ main (int argc,
 
     std::cout << "[+] libnvidia-fbc.so\n";
 
+    ZydisDecoder decoder;
+    ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
+
     bool found = false;
 
     {
-        ZydisDecoder decoder;
-        ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
-
         auto s_text = bin->get_section(".text");
         auto v_text_content = s_text.content();
 
@@ -76,8 +76,31 @@ main (int argc,
 
     PPK_ASSERT_ERROR(found);
 
-    // this makes both branches identical
-    bin->patch_address(offset, { 0x48, 0x83, 0xC4, 0x08, 0xC3 });
+    {
+        auto v_backtrack_bytes = bin->get_content_from_virtual_address(offset - 0xA, 2);
+
+        ZydisDecodedInstruction instr;
+        PPK_ASSERT_ERROR(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder,
+                                                               v_backtrack_bytes.data(),
+                                                               v_backtrack_bytes.size(),
+                                                               &instr)));
+
+
+
+        PPK_ASSERT_ERROR(instr.mnemonic == ZYDIS_MNEMONIC_JNB);
+
+        ZyanU64 addr;
+        PPK_ASSERT_ERROR(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(&instr,
+                                                               &instr.operands[0],
+                                                               offset - 0xA,
+                                                               &addr)));
+
+        // hopefully more fail-safe
+        PPK_ASSERT_ERROR(addr == offset);
+    }
+
+    // NOP the jump
+    bin->patch_address(offset - 0xA, { 0x90, 0x90 });
     bin->write(output.data());
 
     std::cout << "[+] patched successfully\n";

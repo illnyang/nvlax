@@ -56,7 +56,7 @@ patch_linux (LIEF::ELF::Binary *bin)
             }
 
             // this should work forever if we assume that NV_ENCODE_API_FUNCTION_LIST will never change!
-            if (instr.mnemonic == ZYDIS_MNEMONIC_MOV && instr.operands[0].mem.disp.value == 0xF0) {
+            if (instr.mnemonic == ZYDIS_MNEMONIC_MOV && instr.operands[0].mem.disp.value / 8 == 30) {
                 found = true;
                 break;
             }
@@ -97,8 +97,8 @@ patch_linux (LIEF::ELF::Binary *bin)
 
     PPK_ASSERT_ERROR(found);
 
-    // NOP the jump that happens after the test
-    bin->patch_address(offset + 0x5, {0x90, 0x90, 0x90, 0x90, 0x90, 0x90});
+    // test eax, eax -> xor eax, eax
+    bin->patch_address(offset, 0x31, 0x1);
 }
 
 void
@@ -160,7 +160,6 @@ patch_windows (LIEF::PE::Binary *bin)
     bool found = false;
     ZyanU64 offset;
 
-    // this should work forever if we assume that NV_ENCODE_API_FUNCTION_LIST will never change
     {
         auto export_entries = bin->get_export().entries();
 
@@ -190,8 +189,9 @@ patch_windows (LIEF::PE::Binary *bin)
                            instr.operands[1].mem.disp.value;
                 }
 
+                // this should work forever if we assume that NV_ENCODE_API_FUNCTION_LIST will never change!
                 if (instr.mnemonic == ZYDIS_MNEMONIC_MOV &&
-                    instr.operands[0].mem.disp.value == 0xF0)
+                    instr.operands[0].mem.disp.value / 8 == 30)
                 {
                     found = true;
                     offset = follow_thunk(temp);
@@ -204,9 +204,10 @@ patch_windows (LIEF::PE::Binary *bin)
         }
         else {
             while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder, data, length, &instr))) {
+                // this should work forever if we assume that NV_ENCODE_API_FUNCTION_LIST will never change!
                 if (instr.mnemonic == ZYDIS_MNEMONIC_MOV &&
                     instr.operands[0].mem.base == ZYDIS_REGISTER_ESI &&
-                    instr.operands[0].mem.disp.value == 0x7C)
+                    instr.operands[0].mem.disp.value / 4 == 31)
                 {
                     found = true;
                     offset = follow_thunk(bin->rva_to_offset(instr.operands[1].imm.value.u));
@@ -248,12 +249,7 @@ patch_windows (LIEF::PE::Binary *bin)
 
     PPK_ASSERT_ERROR(found);
 
-    if (arch == x64) {
-        bin->patch_address(offset + 0x2, { 0x90, 0x90 });
-    }
-    else {
-        bin->patch_address(offset + 0x5, { 0x90, 0x90 });
-    }
+    bin->patch_address(offset, 0x31, 1);
 }
 
 int

@@ -56,6 +56,7 @@ I have tested this patcher against the following versions (on Linux):
    - 470.74
    - 495.29.05
    - 495.44
+   - 510.39.01
 
 It *should* work on previous versions as well. Please don't open-up new issues if you're using ancient drivers, thanks.
 

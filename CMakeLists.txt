@@ -16,7 +16,7 @@ project(nvlax CXX)
 include(ExternalProject)
 include(cmake/FetchCPM.cmake)
 
-CPMAddPackage("gh:zyantific/zydis#master")
+CPMAddPackage("gh:zyantific/zydis#55dd08c210722aed81b38132f5fd4a04ec1943b5")
 
 CPMAddPackage(
         NAME LIEF_SRC

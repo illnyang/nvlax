@@ -37,7 +37,7 @@ main (int argc,
 
     {
         auto s_rodata = bin->get_section(".rodata");
-        offset = s_rodata.virtual_address() + s_rodata.search("This hardware does not support NvFBC");
+        offset = s_rodata->virtual_address() + s_rodata->search("This hardware does not support NvFBC");
     }
 
     std::cout << "[+] libnvidia-fbc.so\n";
@@ -49,22 +49,23 @@ main (int argc,
 
     {
         auto s_text = bin->get_section(".text");
-        auto v_text_content = s_text.content();
+        auto v_text_content = s_text->content();
 
-        uint8_t *data = v_text_content.data();
-        size_t length = v_text_content.size();
+        const uint8_t *data = v_text_content.data();
+        ZyanUSize length = v_text_content.size();
 
         // find the only x-ref to the string above
         ZydisDecodedInstruction instr;
-        while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder, data, length, &instr))) {
+        ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
+        while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, data, length, &instr, operands))) {
             if (instr.mnemonic == ZYDIS_MNEMONIC_LEA) {
-                size_t temp = s_text.virtual_address() +
+                size_t temp = s_text->virtual_address() +
                               (data - v_text_content.data() + instr.length) +
-                              instr.operands[1].mem.disp.value;
+                              operands[1].mem.disp.value;
 
                 if (temp == offset) {
                     found = true;
-                    offset = s_text.virtual_address() + data - v_text_content.data();
+                    offset = s_text->virtual_address() + data - v_text_content.data();
                     break;
                 }
             }
@@ -80,10 +81,12 @@ main (int argc,
         auto v_backtrack_bytes = bin->get_content_from_virtual_address(offset - 0xA, 2);
 
         ZydisDecodedInstruction instr;
-        PPK_ASSERT_ERROR(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder,
+        ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
+        PPK_ASSERT_ERROR(ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder,
                                                                v_backtrack_bytes.data(),
                                                                v_backtrack_bytes.size(),
-                                                               &instr)));
+                                                               &instr,
+                                                               operands)));
 
 
 
@@ -91,7 +94,7 @@ main (int argc,
 
         ZyanU64 addr;
         PPK_ASSERT_ERROR(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(&instr,
-                                                               &instr.operands[0],
+                                                               &operands[0],
                                                                offset - 0xA,
                                                                &addr)));
 

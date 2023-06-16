@@ -16,11 +16,11 @@ project(nvlax CXX)
 include(ExternalProject)
 include(cmake/FetchCPM.cmake)
 
-CPMAddPackage("gh:zyantific/zydis#master")
+CPMAddPackage("gh:zyantific/zydis#1ba75aeefae37094c7be8eba07ff81d4fe0f1f20")
 
 CPMAddPackage(
         NAME LIEF_SRC
-        GIT_TAG master
+        GIT_TAG b9a5f970b210dbc115c7aaac10e04623bdc08ef8
         GITHUB_REPOSITORY lief-project/LIEF
         DOWNLOAD_ONLY YES
 )
@@ -59,7 +59,7 @@ message(STATUS "LIEF library: ${LIEF_LIBRARIES}")
 
 CPMAddPackage(
         NAME PPK_ASSERT
-        GIT_TAG master
+        GIT_TAG 833b8b7ea49aea540a49f07ad08bf0bae1faac32
         GITHUB_REPOSITORY gpakosz/PPK_ASSERT
         DOWNLOAD_ONLY YES
 )

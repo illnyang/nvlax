@@ -42,21 +42,22 @@ patch_linux (LIEF::ELF::Binary *bin)
         auto f_nvenc_ci = bin->get_symbol("NvEncodeAPICreateInstance");
 
         // 0x260 here is an approximation (we should never have to go past that address)
-        auto v_func_bytes = bin->get_content_from_virtual_address(f_nvenc_ci.value(), 0x260);
+        auto v_func_bytes = bin->get_content_from_virtual_address(f_nvenc_ci->value(), 0x260);
 
-        uint8_t *data = v_func_bytes.data();
-        size_t length = v_func_bytes.size();
+        const uint8_t *data = v_func_bytes.data();
+        ZyanUSize length = v_func_bytes.size();
 
         ZydisDecodedInstruction instr;
-        while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder, data, length, &instr))) {
+        ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
+        while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, data, length, &instr, operands))) {
             if (instr.mnemonic == ZYDIS_MNEMONIC_LEA) {
-                offset = f_nvenc_ci.value() +
+                offset = f_nvenc_ci->value() +
                          (data - v_func_bytes.data() + instr.length) +
-                         instr.operands[1].mem.disp.value;
+                         operands[1].mem.disp.value;
             }
 
             // this should work forever if we assume that NV_ENCODE_API_FUNCTION_LIST will never change!
-            if (instr.mnemonic == ZYDIS_MNEMONIC_MOV && instr.operands[0].mem.disp.value / 8 == 30) {
+            if (instr.mnemonic == ZYDIS_MNEMONIC_MOV && operands[0].mem.disp.value / 8 == 30) {
                 found = true;
                 break;
             }
@@ -73,16 +74,17 @@ patch_linux (LIEF::ELF::Binary *bin)
         // 0x235 here is an approximation (we should never have to go past that address)
         auto v_func_bytes = bin->get_content_from_virtual_address(offset, 0x235);
 
-        uint8_t *data = v_func_bytes.data();
-        size_t length = v_func_bytes.size();
+        const uint8_t *data = v_func_bytes.data();
+        ZyanUSize length = v_func_bytes.size();
 
         // look for the second instance of 'test eax, eax'
         uint8_t n = 0;
         ZydisDecodedInstruction instr;
-        while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder, data, length, &instr))) {
+        ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
+        while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, data, length, &instr, operands))) {
             if (instr.mnemonic == ZYDIS_MNEMONIC_TEST &&
-                instr.operands[0].reg.value == ZYDIS_REGISTER_EAX &&
-                instr.operands[1].reg.value == ZYDIS_REGISTER_EAX &&
+                operands[0].reg.value == ZYDIS_REGISTER_EAX &&
+                operands[1].reg.value == ZYDIS_REGISTER_EAX &&
                 (++n) > 1)
             {
                 offset += (data - v_func_bytes.data());
@@ -142,16 +144,18 @@ patch_windows (LIEF::PE::Binary *bin)
         auto v_thunk_bytes = bin->get_content_from_virtual_address(address, 0x5);
 
         ZydisDecodedInstruction instr;
-        PPK_ASSERT_ERROR(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder,
+        ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
+        PPK_ASSERT_ERROR(ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder,
                                                                v_thunk_bytes.data(),
                                                                v_thunk_bytes.size(),
-                                                               &instr)));
+                                                               &instr,
+                                                               operands)));
 
         PPK_ASSERT_ERROR(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
 
 
         PPK_ASSERT_ERROR(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(&instr,
-                                                               &instr.operands[0],
+                                                               &operands[0],
                                                                address,
                                                                &offset)));
         return offset;
@@ -173,25 +177,26 @@ patch_windows (LIEF::PE::Binary *bin)
 
         auto v_func_bytes = bin->get_content_from_virtual_address(offset, arch == x64 ? 0x25B : 0x17E);
 
-        uint8_t *data = v_func_bytes.data();
-        size_t length = v_func_bytes.size();
+        const uint8_t *data = v_func_bytes.data();
+        ZyanUSize length = v_func_bytes.size();
 
         ZydisDecodedInstruction instr;
+        ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
 
         if (arch == x64) {
             ZyanU64 temp = 0;
-            while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder, data, length, &instr))) {
+            while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, data, length, &instr, operands))) {
                 if (instr.mnemonic == ZYDIS_MNEMONIC_LEA &&
-                    instr.operands[1].type == ZYDIS_OPERAND_TYPE_MEMORY)
+                    operands[1].type == ZYDIS_OPERAND_TYPE_MEMORY)
                 {
                     temp = offset +
                            (data - v_func_bytes.data() + instr.length) +
-                           instr.operands[1].mem.disp.value;
+                           operands[1].mem.disp.value;
                 }
 
                 // this should work forever if we assume that NV_ENCODE_API_FUNCTION_LIST will never change!
                 if (instr.mnemonic == ZYDIS_MNEMONIC_MOV &&
-                    instr.operands[0].mem.disp.value / 8 == 30)
+                    operands[0].mem.disp.value / 8 == 30)
                 {
                     found = true;
                     offset = follow_thunk(temp);
@@ -201,16 +206,15 @@ patch_windows (LIEF::PE::Binary *bin)
                 data += instr.length;
                 length -= instr.length;
             }
-        }
-        else {
-            while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder, data, length, &instr))) {
+        } else {
+            while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, data, length, &instr, operands))) {
                 // this should work forever if we assume that NV_ENCODE_API_FUNCTION_LIST will never change!
                 if (instr.mnemonic == ZYDIS_MNEMONIC_MOV &&
-                    instr.operands[0].mem.base == ZYDIS_REGISTER_ESI &&
-                    instr.operands[0].mem.disp.value / 4 == 31)
+                    operands[0].mem.base == ZYDIS_REGISTER_ESI &&
+                    operands[0].mem.disp.value / 4 == 31)
                 {
                     found = true;
-                    offset = follow_thunk(bin->rva_to_offset(instr.operands[1].imm.value.u));
+                    offset = follow_thunk(bin->rva_to_offset(operands[1].imm.value.u));
                     break;
                 }
 
@@ -226,15 +230,16 @@ patch_windows (LIEF::PE::Binary *bin)
     {
         auto v_func_bytes = bin->get_content_from_virtual_address(offset, arch == x64 ? 0x18E : 0x189);
 
-        uint8_t *data = v_func_bytes.data();
-        size_t length = v_func_bytes.size();
+        const uint8_t *data = v_func_bytes.data();
+        ZyanUSize length = v_func_bytes.size();
 
         uint8_t n = 0;
         ZydisDecodedInstruction instr;
-        while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder, data, length, &instr))) {
+        ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
+        while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, data, length, &instr, operands))) {
             if (instr.mnemonic == ZYDIS_MNEMONIC_TEST &&
-                instr.operands[0].reg.value == ZYDIS_REGISTER_EAX &&
-                instr.operands[1].reg.value == ZYDIS_REGISTER_EAX &&
+                operands[0].reg.value == ZYDIS_REGISTER_EAX &&
+                operands[1].reg.value == ZYDIS_REGISTER_EAX &&
                 (++n) > (arch == x64 ? 0 : 1))
             {
                 found = true;

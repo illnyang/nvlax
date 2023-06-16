@@ -90,3 +90,5 @@ _deps
 *.ori
 *.orig
 *.tmp
+/build
+/.cache

@@ -70,8 +70,8 @@ patch_linux (LIEF::ELF::Binary *bin)
     found = false;
 
     {
-        // 0x235 here is an approximation (we should never have to go past that address)
-        auto v_func_bytes = bin->get_content_from_virtual_address(offset, 0x235);
+        // 0x1b8f6 here is an approximation (we should never have to go past that address)
+        auto v_func_bytes = bin->get_content_from_virtual_address(offset, 0x1b8f6);
 
         uint8_t *data = v_func_bytes.data();
         size_t length = v_func_bytes.size();
